@@ -1,0 +1,74 @@
+{
+  "diagnosis": "Acute Bacterial Dysentery (suspected)",
+  "prescription": {
+    "medications": [
+      {
+        "name": "Ciprofloxacin",
+        "dosage": "500mg",
+        "frequency": "twice daily",
+        "duration": "5 days"
+      },
+      {
+        "name": "Acetaminophen",
+        "dosage": "500mg",
+        "frequency": "every 6 hours as needed",
+        "duration": "for fever and pain"
+      },
+      {
+        "name": "Oral Rehydration Solution",
+        "dosage": "200-400ml",
+        "frequency": "after each loose stool",
+        "duration": "until diarrhea resolves"
+      }
+    ],
+    "tests": [
+      "Stool culture and sensitivity",
+      "Complete Blood Count (CBC)",
+      "C-reactive protein",
+      "Basic metabolic panel",
+      "Stool examination for ova and parasites"
+    ],
+    "follow_up": [
+      "Schedule follow-up visit in 3-5 days",
+      "Immediate return if symptoms worsen",
+      "Return if symptoms persist beyond 7 days",
+      "Contact immediately if severe abdominal pain or high fever develops"
+    ],
+    "advice": [
+      "Stay well hydrated - drink at least 2-3 liters of fluids daily",
+      "Avoid solid foods temporarily; start with clear liquids",
+      "Gradually introduce bland foods (BRAT diet - Bananas, Rice, Applesauce, Toast)",
+      "Practice strict hand hygiene",
+      "Avoid preparing food for others while symptomatic",
+      "Rest adequately until symptoms improve"
+    ]
+  },
+  "symptoms": [
+    {
+      "name": "bloody diarrhea",
+      "duration": "1 week",
+      "severity": "severe"
+    },
+    {
+      "name": "abdominal pain",
+      "duration": "1 week",
+      "severity": "moderate"
+    },
+    {
+      "name": "abdominal cramps",
+      "duration": "1 week",
+      "severity": "moderate"
+    },
+    {
+      "name": "fever",
+      "duration": "1 week",
+      "severity": "moderate"
+    }
+  ],
+  "medical_history": {
+    "medical_history": [],
+    "allergies": [],
+    "family_history": "None reported"
+  },
+  "timestamp": "2025-03-14T23:34:00.948891"
+}
