@@ -4,6 +4,7 @@ import asyncio
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 from dotenv import load_dotenv
+from server.src.langchain_openai_voice_module import OpenAIVoice
 from web3 import Web3
 from langchain_openai_voice import OpenAIVoice
 from web3 import Web3
@@ -87,12 +88,6 @@ class DoctorPatientAgent:
         self.current_symptoms = []
         self.medical_history = []
         self.prescription = []
-        self.administrative_data = {
-            "patient_registration": {},
-            "insurance": {},
-            "consent": {},
-            "hipaa": {}
-        }
         
     async def record_voice_input(self) -> str:
         """Record audio from the user and transcribe it to text."""
@@ -135,325 +130,21 @@ class DoctorPatientAgent:
             print("\n[Voice speaking complete]")
         except Exception as e:
             logger.error(f"Error in text-to-speech: {e}")
-    async def learn_websites(self):
-        """Learn from websites using browser agent."""
-        logger.info("Learning from websites...")
-        
-        for url in self.config["website_knowledge"]["urls"]:
-            try:
-                # Create browsing task for website exploration
-                task = f"""
-                Visit {url} and thoroughly explore the website to understand:
-                1. Main product/service offerings
-                2. Key features and benefits
-                3. Technical specifications
-                4. Pricing information (if available)
-                5. Documentation and guides
-                
-                Provide a comprehensive summary of the findings.
-                """
-                
-                # Execute browser task
-                result = await self.browser_tool._arun(task)
-                self.website_knowledge[url] = result
-                logger.info(f"Successfully explored {url}")
-                
-            except Exception as e:
-                logger.error(f"Error exploring {url}: {e}")
-                # Use fallback content if available
-                self.website_knowledge[url] = self.config["website_knowledge"].get(
-                    "fallback_content", {}).get("description", "")
-        
-        logger.info("Website learning completed")
-
-    async def yn_vagueness(self, response: str, question_context: str) -> Dict[str, str]:
-        """Analyze if response is vague."""
-        prompt = f"""
-        Question asked: {question_context}
-        User response: {response}
-
-        Is this response vague? 
-        Return your answer as a yes or no answer
-        """
-        llm_response = await self.llm.ainvoke(prompt)
-        return llm_response.text()
-    
-
-    async def yn_difference(self, response: str, question_context: str) -> Dict[str, str]:
-        """Analyze if response differs from product knowledge."""
-        prompt = f"""
-        Question asked: {question_context}
-        User response: {response}
-
-        Does this response differ from what you know about {self.config['name']}?
-        Return your answer as a yes or no answer
-        """
-        llm_response = await self.llm.ainvoke(prompt)
-        return llm_response.text()
-
-    async def yn_features(self, response: str, product: str) -> Dict[str, str]:
-        """Analyze features mentioned in response."""
-        prompt = f"""
-        User response: {response}
-        Using my knowledge of {product},
-        are there any features on {product} that are commonly used alongside any features mentioned in this response?
-        Return your answer as a yes or no answer
-        """
-        llm_response = await self.llm.ainvoke(prompt)
-        return llm_response.text()
-
-    async def yn_continue(self, response: str, question_context: str) -> Dict[str, str]:
-        """Determine if conversation should continue."""
-        prompt = f"""
-        Question asked: {question_context}
-        User response: {response}
-
-        Would continuing this line of conversation yield more insights about product-market fit?
-        Return your answer as a yes or no answer
-        """
-        llm_response = await self.llm.ainvoke(prompt)
-        return llm_response.text()
-
-    async def followup_vagueness(self, response: str, question_context: str) -> str:
-        """Generate a follow-up question based on LLM analysis."""
-        prompt = f"""
-        Question asked: {question_context}
-        User response: {response}
-
-        Given this question and answer, what follow-up question should I ask to understand the user's perspective better?
-        The follow-up should help clarify their response and gather more specific details.
-        
-        Return only the follow-up question, without any additional explanation or formatting.
-        """
-        
-        follow_up = await self.llm.ainvoke(prompt)
-        return follow_up.text().strip()
-
-    async def followup_differences(self, response: str, question_context: str) -> str:
-        """Generate a follow-up question for unexpected responses."""
-        prompt = f"""
-        Question asked: {question_context}
-        User response: {response}
-
-        Given this response differs from typical product usage patterns, what follow-up question should I ask to better understand their unique perspective?
-        The follow-up should explore their reasoning and specific use case.
-        
-        Return only the follow-up question, without any additional explanation or formatting.
-        """
-        
-        follow_up = await self.llm.ainvoke(prompt)
-        return follow_up.text().strip()
-
-    async def feature_connections(self, response: str, product: str) -> str:
-        """Ask LLM about related features."""
-        prompt = f"""
-        Based on this response: "{response}" by the user, look at the my knowledge of {product} and what
-        features do this type user typically use alongside with on {product}?
-        Explain why these combinations are valuable.
-        Answer in a concise paragraph, keep in mind the user's demographic hinted from the response
-        """
-        response=await self.llm.ainvoke(prompt)
-        return response.text()
-
-    async def collect_patient_registration_info(self) -> Dict[str, Any]:
-        """Collect patient registration information."""
-        print("\n=== Patient Registration Information ===")
-        registration_data = {}
-        
-        # Personal Information
-        print("\nPersonal Information:")
-        registration_data["personal_info"] = {
-            "full_name": await self.ask_question("What is your full name?"),
-            "date_of_birth": await self.ask_question("What is your date of birth? (MM/DD/YYYY)"),
-            "gender": await self.ask_question("What is your gender?"),
-            "marital_status": await self.ask_question("What is your marital status?")
-        }
-        
-        # Contact Information
-        print("\nContact Information:")
-        registration_data["contact_info"] = {
-            "current_address": await self.ask_question("What is your current address?"),
-            "phone_number": await self.ask_question("What is your phone number?"),
-            "email_address": await self.ask_question("What is your email address?"),
-            "ssn": await self.ask_question("What are the last 4 digits of your Social Security Number? (Optional)"),
-            "government_id": await self.ask_question("Do you have any other form of government-issued ID? If yes, please provide the type and last 4 digits. (Optional)")
-        }
-        
-        # Emergency Contact
-        print("\nEmergency Contact:")
-        registration_data["emergency_contact"] = {
-            "name": await self.ask_question("Who should we contact in case of emergency? (Full name)"),
-            "relationship": await self.ask_question("What is their relationship to you?"),
-            "phone_number": await self.ask_question("What is their phone number?")
-        }
-        
-        # Demographics
-        print("\nDemographic Information:")
-        registration_data["demographics"] = {
-            "race": await self.ask_question("What is your race? (Optional)"),
-            "ethnicity": await self.ask_question("What is your ethnicity? (Optional)"),
-            "preferred_language": await self.ask_question("What is your preferred language?")
-        }
-        
-        # Provider Information
-        print("\nProvider Information:")
-        registration_data["provider_info"] = {
-            "primary_care_provider": await self.ask_question("Who is your primary care provider? (If any)"),
-            "previous_provider": await self.ask_question("Who was your previous healthcare provider? (If different)")
-        }
-        
-        self.administrative_data["patient_registration"] = registration_data
-        return registration_data
-
-    async def collect_insurance_information(self) -> Dict[str, Any]:
-        """Collect insurance information."""
-        print("\n=== Insurance Information ===")
-        insurance_data = {}
-        
-        # Insurance Details
-        print("\nInsurance Details:")
-        insurance_data["insurance_details"] = {
-            "company_name": await self.ask_question("What is the name of your insurance company?"),
-            "policy_number": await self.ask_question("What is your policy number?"),
-            "group_number": await self.ask_question("What is your group number? (If applicable)")
-        }
-        
-        # Policyholder Information
-        print("\nPolicyholder Information:")
-        insurance_data["policyholder_info"] = {
-            "name": await self.ask_question("Who is the primary policyholder?"),
-            "relationship_to_patient": await self.ask_question("What is your relationship to the policyholder? (If different from self)"),
-            "employer": await self.ask_question("What is the policyholder's employer? (If employer-sponsored)")
-        }
-        
-        # Insurance Contact
-        insurance_data["insurance_contact"] = {
-            "billing_address": await self.ask_question("What is the billing address for your insurance?"),
-            "phone_number": await self.ask_question("What is the insurance company's contact phone number?")
-        }
-        
-        # Authorization Information
-        insurance_data["authorization"] = {
-            "pre_auth_required": await self.ask_question("Does your insurance require pre-authorization for visits? (Yes/No)"),
-            "referral_required": await self.ask_question("Does your insurance require referrals for specialist visits? (Yes/No)")
-        }
-        
-        self.administrative_data["insurance"] = insurance_data
-        return insurance_data
-
-    async def collect_treatment_consent(self) -> Dict[str, Any]:
-        """Collect informed consent for treatment."""
-        print("\n=== Consent for Treatment ===")
-        
-        # Explain treatment details
-        consent_explanation = f"""
-        Based on our consultation, you have been diagnosed with: {self.prescription.get('diagnosis', 'pending diagnosis')}
-        
-        Proposed treatment plan includes:
-        1. Medications:
-        {self._format_medications(self.prescription.get('prescription', {}).get('medications', []))}
-        
-        2. Recommended tests:
-        {self._format_list(self.prescription.get('prescription', {}).get('tests', []))}
-        
-        3. Follow-up care:
-        {self._format_list(self.prescription.get('prescription', {}).get('follow_up', []))}
-        
-        Potential risks and benefits have been explained. Emergency care will be provided if needed.
-        """
-        
-        print(consent_explanation)
-        if self.voice_enabled and self.voice_llm:
-            await self.speak_text(consent_explanation)
-        
-        consent_data = {
-            "verbal_consent": {
-                "given": await self.ask_question("Do you understand and consent to this treatment plan? (Yes/No)"),
-                "datetime": datetime.now().isoformat(),
-                "witness": "AI Medical Assistant"
-            },
-            "emergency_authorization": {
-                "authorized": await self.ask_question("Do you authorize emergency treatment if needed? (Yes/No)"),
-                "limitations": await self.ask_question("Are there any limitations to your consent for emergency treatment?")
-            }
-        }
-        
-        self.administrative_data["consent"] = consent_data
-        return consent_data
-
-    async def collect_hipaa_acknowledgment(self) -> Dict[str, Any]:
-        """Collect HIPAA privacy acknowledgment."""
-        print("\n=== HIPAA Privacy Practices Acknowledgment ===")
-        
-        # Explain HIPAA privacy practices
-        hipaa_explanation = """
-        HIPAA Privacy Practices Overview:
-        
-        1. Use of Your Information:
-           - For treatment, payment, and healthcare operations
-           - Shared only with authorized healthcare providers
-           - Used for care coordination and quality improvement
-        
-        2. Your Rights:
-           - Access and obtain copies of your medical records
-           - Request amendments to your records
-           - Receive an accounting of disclosures
-           - Request restrictions on information sharing
-        
-        3. Our Security Measures:
-           - Electronic records are encrypted and password-protected
-           - Physical records are stored in secure locations
-           - Staff are trained in privacy procedures
-           - Regular security audits are conducted
-        """
-        
-        print(hipaa_explanation)
-        if self.voice_enabled and self.voice_llm:
-            await self.speak_text(hipaa_explanation)
-        
-        hipaa_data = {
-            "verbal_acknowledgment": {
-                "given": await self.ask_question("Do you acknowledge receipt and understanding of our HIPAA privacy practices? (Yes/No)"),
-                "datetime": datetime.now().isoformat(),
-                "witness": "AI Medical Assistant"
-            }
-        }
-        
-        self.administrative_data["hipaa"] = hipaa_data
-        return hipaa_data
-
-    def _format_medications(self, medications: List[Dict[str, str]]) -> str:
-        """Format medications list for display."""
-        if not medications:
-            return "No medications prescribed"
-        
-        formatted = []
-        for med in medications:
-            formatted.append(f"- {med.get('name', 'Unknown')}: {med.get('dosage', 'Unknown dosage')}")
-        return "\n".join(formatted)
-
-    def _format_list(self, items: List[str]) -> str:
-        """Format list items for display."""
-        if not items:
-            return "None"
-        return "\n".join(f"- {item}" for item in items)
 
     async def conduct_consultation(self):
         """Conduct the medical consultation process."""
         logger.info("Starting medical consultation...")
         
         try:
-            # Collect administrative information first
-            await self.collect_patient_registration_info()
-            await self.collect_insurance_information()
-            
-            # Conduct medical consultation
-            initial_assessment = await self.ask_question("Please describe your current symptoms and their duration:")
+            # Initial symptom collection
+            initial_assessment = await self.ask_question("Hi I am Dr. Agent, here to help you out today! Please describe your current symptoms and their duration:")
             self.current_symptoms = await self.analyze_symptoms(initial_assessment)
             
+            # Medical history collection
             history_response = await self.ask_question("Do you have any relevant medical history or existing conditions?")
             self.medical_history = await self.analyze_medical_history(history_response)
             
+            # Medication check
             meds_response = await self.ask_question("Are you currently taking any medications or supplements?")
             current_meds = await self.identify_medications(meds_response)
             
@@ -469,14 +160,8 @@ class DoctorPatientAgent:
                 await self.update_assessment(follow_up_response)
                 follow_up_count += 1
             
-            # Generate prescription
+            # Generate and present prescription
             await self.generate_prescription()
-            
-            # Collect consent and acknowledgments
-            await self.collect_treatment_consent()
-            await self.collect_hipaa_acknowledgment()
-            
-            # Save all consultation data
             await self.save_consultation()
             
         except MedicalConsultationException as e:
@@ -594,13 +279,12 @@ class DoctorPatientAgent:
             print(f"- {med['name']}: {med['dosage']} for {med['duration']}")
 
     async def save_consultation(self):
-        """Save medical consultation data including administrative forms."""
+        """Save medical consultation data."""
         data = {
             "diagnosis": self.prescription["diagnosis"],
             "prescription": self.prescription["prescription"],
             "symptoms": self.current_symptoms,
             "medical_history": self.medical_history,
-            "administrative_data": self.administrative_data,
             "timestamp": datetime.now().isoformat()
         }
         
@@ -865,18 +549,121 @@ class DoctorPatientAgent:
             logger.error(f"Error updating assessment: {e}")
             # Continue consultation despite error
 
+    async def process_voice_input(self, text: str) -> str:
+        """Process voice input from phone call and return spoken response"""
+        # Initialize conversation state if first call
+        if not hasattr(self, 'call_state'):
+            self.call_state = 'greeting'
+            self.demographics = {}
+            self.call_history = []
+        
+        # Record input
+        self.call_history.append({"user": text, "timestamp": datetime.now().isoformat()})
+        
+        # Process based on current state
+        if self.call_state == 'greeting':
+            # First interaction - collect demographics
+            response = "Hello, I'm Dr. Smith. To get started, could you please tell me your name, age, and biological sex?"
+            self.call_state = 'demographics'
+        
+        elif self.call_state == 'demographics':
+            # Process demographics
+            try:
+                # Extract demographics from text
+                prompt = f"""
+                Extract the following information from the patient's response:
+                Patient response: {text}
+                
+                Format as JSON:
+                {{
+                    "name": "patient name",
+                    "age": "patient age as number",
+                    "sex": "biological sex (male/female)"
+                }}
+                """
+                result = await self.llm.ainvoke(prompt)
+                self.demographics = json.loads(result.text())
+                
+                # Move to symptoms
+                response = f"Thank you {self.demographics.get('name', 'there')}. What symptoms are you experiencing today?"
+                self.call_state = 'symptoms'
+            except:
+                # Retry demographics
+                response = "I didn't quite catch that. Could you please tell me your name, age, and biological sex?"
+        
+        elif self.call_state == 'symptoms':
+            # Process symptoms
+            self.symptoms = text
+            response = "I understand. Do you have any relevant medical history I should know about?"
+            self.call_state = 'medical_history'
+        
+        elif self.call_state == 'medical_history':
+            # Process medical history
+            self.medical_history = text
+            response = "Are you currently taking any medications?"
+            self.call_state = 'medications'
+        
+        elif self.call_state == 'medications':
+            # Process medications
+            self.medications = text
+            
+            # Generate assessment
+            prompt = f"""
+            Based on the following patient information, provide a brief assessment and recommendation:
+            
+            Demographics: {self.demographics}
+            Symptoms: {self.symptoms}
+            Medical History: {self.medical_history}
+            Medications: {self.medications}
+            
+            Keep your response conversational and under 200 words.
+            """
+            result = await self.llm.ainvoke(prompt)
+            assessment = result.text()
+            
+            # Final response
+            response = f"Based on what you've told me, {assessment} Is there anything else you'd like to discuss?"
+            self.call_state = 'followup'
+        
+        elif self.call_state == 'followup':
+            # Handle follow-up or end conversation
+            if any(word in text.lower() for word in ['no', 'nothing', 'that\'s all', 'goodbye']):
+                response = "Thank you for calling. Take care and have a good day."
+                self.call_state = 'end'
+            else:
+                # Generate contextual response to follow-up
+                prompt = f"""
+                Patient has additional question or concern: {text}
+                
+                Previous conversation:
+                Demographics: {self.demographics}
+                Symptoms: {self.symptoms}
+                Medical History: {self.medical_history}
+                Medications: {self.medications}
+                
+                Provide a helpful, brief response addressing their concern.
+                """
+                result = await self.llm.ainvoke(prompt)
+                response = f"{result.text()} Is there anything else I can help with?"
+        
+        else:
+            # Default response
+            response = "Thank you for calling. Is there anything else I can help with?"
+        
+        # Record response
+        self.call_history.append({"doctor": response, "timestamp": datetime.now().isoformat()})
+        return response
+
 async def main():
     # Load character configuration
-    print("Fetching character configuration...")
     with open("characters/interviewer.json", "r") as f:
         character_config = json.load(f)
-    print("Character configurations fetched successfully!")
-    
+
     # Check if voice mode is enabled
     voice_enabled = os.getenv("VOICE_ENABLED", "false").lower() == "true"
     if voice_enabled:
         print("Voice mode ENABLED - you can speak responses and hear questions")
-        print("Make sure you have the required packages: pip install openai sounddevice soundfile numpy")
+        # print("Make sure you have the required packages: pip install openai sounddevice soundfile numpy")
         # Check for OPENAI_API_KEY
         if not os.getenv("OPENAI_API_KEY"):
             print("WARNING: OPENAI_API_KEY not found in environment variables")
@@ -884,15 +671,9 @@ async def main():
             print("Add OPENAI_API_KEY to your .env file or set it in your environment")
 
     # Initialize agent
-    print("Initializing agent...")
     agent = DoctorPatientAgent(character_config)
     print("Agent initialized successfully!")
-    
-    # Learn from websites
-    #print("Learning from websites...")
-    #await agent.learn_websites()
-    #print("Websites learned successfully!")
-    # Conduct consultation
+
     await agent.conduct_consultation()
 
 if __name__ == "__main__":
