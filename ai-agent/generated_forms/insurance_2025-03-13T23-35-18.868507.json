@@ -1,0 +1,31 @@
+{
+  "form_type": "Insurance Information",
+  "timestamp": "2025-03-13T23:35:18.868507",
+  "insurance_details": {
+    "company_name": "",
+    "policy_number": "",
+    "group_number": ""
+  },
+  "policyholder_info": {
+    "name": "",
+    "relationship_to_patient": "",
+    "employer": ""
+  },
+  "insurance_contact": {
+    "billing_address": "",
+    "phone_number": "",
+    "email": ""
+  },
+  "employer_plan": {
+    "is_employer_sponsored": false,
+    "employer_name": "",
+    "group_plan_details": ""
+  },
+  "authorization": {
+    "pre_auth_required": false,
+    "pre_auth_number": "",
+    "referral_required": false,
+    "referral_details": ""
+  },
+  "form_id": "INS_20250315_063906"
+}

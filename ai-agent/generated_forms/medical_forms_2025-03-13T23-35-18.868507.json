@@ -1,0 +1,135 @@
+{
+  "patient_registration": {
+    "form_type": "Patient Registration",
+    "timestamp": "2025-03-13T23:35:18.868507",
+    "status": "Incomplete - Requires additional patient information",
+    "required_fields": [
+      "full_name",
+      "date_of_birth",
+      "gender",
+      "marital_status",
+      "contact_information",
+      "emergency_contact",
+      "demographics"
+    ]
+  },
+  "medical_history": {
+    "form_type": "Medical History",
+    "timestamp": "2025-03-13T23:35:18.868507",
+    "current_conditions": {
+      "primary_diagnosis": "Upper Respiratory Tract Infection (Common Cold)",
+      "active_symptoms": [
+        {
+          "name": "feeling cold",
+          "duration": "2 days",
+          "severity": "mild"
+        },
+        {
+          "name": "headaches",
+          "duration": "2 days",
+          "severity": "mild"
+        },
+        {
+          "name": "sneezing",
+          "duration": "2 days",
+          "severity": "moderate"
+        },
+        {
+          "name": "fever",
+          "duration": "unknown",
+          "severity": "unknown"
+        },
+        {
+          "name": "cough",
+          "duration": "unknown",
+          "severity": "unknown"
+        },
+        {
+          "name": "sore throat",
+          "duration": "mornings only",
+          "severity": "unknown"
+        },
+        {
+          "name": "fever",
+          "duration": "2 days",
+          "severity": "severe"
+        }
+      ]
+    },
+    "past_medical_history": [
+      {
+        "condition": "pneumonia",
+        "duration": "occurred at age 5",
+        "treatment": "not specified"
+      }
+    ],
+    "current_medications": [
+      {
+        "name": "Acetaminophen (Tylenol)",
+        "dosage": "500mg every 6 hours as needed",
+        "duration": "5 days",
+        "purpose": "For fever and headache"
+      },
+      {
+        "name": "Dextromethorphan",
+        "dosage": "10-20mg every 4-6 hours as needed",
+        "duration": "5 days",
+        "purpose": "For cough"
+      },
+      {
+        "name": "Saline nasal spray",
+        "dosage": "2 sprays per nostril as needed",
+        "duration": "Until symptoms resolve",
+        "purpose": "For nasal congestion"
+      }
+    ],
+    "allergies": [],
+    "family_history": "none reported"
+  },
+  "consent_for_treatment": {
+    "form_type": "Consent for Treatment",
+    "timestamp": "2025-03-13T23:35:18.868507",
+    "diagnosis": "Upper Respiratory Tract Infection (Common Cold)",
+    "proposed_treatment": {
+      "medications": [
+        {
+          "name": "Acetaminophen (Tylenol)",
+          "dosage": "500mg every 6 hours as needed",
+          "duration": "5 days",
+          "purpose": "For fever and headache"
+        },
+        {
+          "name": "Dextromethorphan",
+          "dosage": "10-20mg every 4-6 hours as needed",
+          "duration": "5 days",
+          "purpose": "For cough"
+        },
+        {
+          "name": "Saline nasal spray",
+          "dosage": "2 sprays per nostril as needed",
+          "duration": "Until symptoms resolve",
+          "purpose": "For nasal congestion"
+        }
+      ],
+      "tests": [
+        "Rapid COVID-19 test",
+        "Rapid strep test if sore throat persists"
+      ],
+      "follow_up": [
+        "Return if symptoms worsen or persist beyond 7 days",
+        "Seek immediate care if fever exceeds 103\u00b0F (39.4\u00b0C)",
+        "Virtual check-up in 3 days if no improvement"
+      ]
+    },
+    "status": "Pending patient signature",
+    "required_fields": [
+      "patient_signature",
+      "date_signed"
+    ]
+  },
+  "metadata": {
+    "generated_at": "2025-03-15T06:33:53.702017",
+    "consultation_reference": "2025-03-13T23:35:18.868507",
+    "forms_status": "Partially complete - Requires additional information and signatures"
+  }
+}
