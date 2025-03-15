@@ -401,72 +401,7 @@
     <div class="vote-success" id="voteSuccess">Vote recorded successfully!</div>
 
     <script>
-      // Sample consultations data
-      const consultations = [
-        {
-          id: "20250314_111933",
-          demographics: {
-            age: 35,
-            sex: "M",
-          },
-          diagnosis:
-            "Acute allergic reaction (possible environmental allergen)",
-          symptoms: [
-            {
-              name: "hives",
-              severity: "moderate",
-            },
-            {
-              name: "puffy eyes",
-              severity: "mild",
-            },
-          ],
-          prescription: {
-            medications: [
-              {
-                name: "Cetirizine (Zyrtec)",
-                dosage: "10mg",
-                duration: "14 days",
-              },
-              {
-                name: "Prednisolone",
-                dosage: "20mg",
-                duration: "5 days",
-              },
-            ],
-          },
-          medical_history: [],
-        },
-        {
-          id: "20250314_232842",
-          demographics: {
-            age: 42,
-            sex: "F",
-          },
-          diagnosis: "Migraine with aura",
-          symptoms: [
-            {
-              name: "severe headache",
-              severity: "severe",
-            },
-            {
-              name: "visual disturbances",
-              severity: "moderate",
-            },
-          ],
-          prescription: {
-            medications: [
-              {
-                name: "Sumatriptan",
-                dosage: "50mg",
-                duration: "as needed",
-              },
-            ],
-          },
-          medical_history: ["Previous migraines"],
-        },
-      ];
-
+      let consultations = [];
       let currentConsultation = null;
 
       // Initialize voted cases tracking
@@ -487,8 +422,74 @@
         console.error("Error loading saved votes:", error);
       }
 
-      // Initialize the page
-      document.addEventListener("DOMContentLoaded", renderTasks);
+      // Function to fetch and parse consultation files
+      async function loadConsultations() {
+        try {
+          // Get list of consultation files from server
+          const response = await fetch(
+            "http://localhost:8000/list-consultations"
+          );
+          if (!response.ok) {
+            throw new Error("Failed to fetch consultation list");
+          }
+          const consultationFiles = await response.json();
+
+          // Fetch each consultation file
+          const fetchPromises = consultationFiles.map(async (filename) => {
+            try {
+              const response = await fetch(
+                `http://localhost:8000/consultations/${filename}`
+              );
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to fetch ${filename}: ${response.status}`
+                );
+              }
+              const data = await response.json();
+              data.id = filename.replace(".json", "");
+              return data;
+            } catch (error) {
+              console.error(`Error loading ${filename}:`, error);
+              return null;
+            }
+          });
+
+          const results = await Promise.all(fetchPromises);
+          const newConsultations = results.filter((result) => result !== null);
+
+          if (newConsultations.length === 0) {
+            throw new Error("No consultation files could be loaded");
+          }
+
+          // Check if we have new or different consultations
+          const currentIds = new Set(consultations.map((c) => c.id));
+          const newIds = new Set(newConsultations.map((c) => c.id));
+
+          // Update only if we have changes
+          if (
+            currentIds.size !== newIds.size ||
+            !Array.from(currentIds).every((id) => newIds.has(id))
+          ) {
+            consultations = newConsultations;
+            console.log("Updated consultations:", consultations);
+            renderTasks();
+          }
+        } catch (error) {
+          console.error("Error loading consultations:", error);
+          document.getElementById(
+            "pendingTasksGrid"
+          ).innerHTML = `<p style="color: red;">Error loading consultations: ${error.message}</p>`;
+        }
+      }
+
+      // Initialize the page and set up polling
+      document.addEventListener("DOMContentLoaded", () => {
+        // Initial load
+        loadConsultations();
+
+        // Poll for changes every 5 seconds
+        setInterval(loadConsultations, 5000);
+      });
 
       function renderTasks() {
         const pendingGrid = document.getElementById("pendingTasksGrid");
@@ -496,13 +497,22 @@
         pendingGrid.innerHTML = "";
         votedGrid.innerHTML = "";
 
+        if (consultations.length === 0) {
+          pendingGrid.innerHTML = "<p>No consultations found.</p>";
+          return;
+        }
+
         consultations.forEach((consultation) => {
           const card = document.createElement("div");
           card.className = "task-card";
           card.onclick = () => showConsultation(consultation);
 
           const title = document.createElement("h3");
-          title.textContent = `${consultation.demographics.age}${consultation.demographics.sex}, presenting with ${consultation.symptoms[0].name}`;
+          // Get the first symptom with a severity of "severe" or just the first symptom
+          const mainSymptom =
+            consultation.symptoms.find((s) => s.severity === "severe") ||
+            consultation.symptoms[0];
+          title.textContent = `Patient presenting with ${mainSymptom.name}`;
           card.appendChild(title);
 
           if (votedCases.has(consultation.id)) {
@@ -581,15 +591,22 @@
         document.getElementById("diagnosis").textContent =
           consultation.diagnosis;
 
+        // Patient Info - since demographics is not directly available, we'll show symptoms
         const patientInfo = document.getElementById("patientInfo");
-        patientInfo.textContent = `${consultation.demographics.age} year old ${consultation.demographics.sex}`;
+        const mainSymptom =
+          consultation.symptoms.find((s) => s.severity === "severe") ||
+          consultation.symptoms[0];
+        patientInfo.textContent = `Patient presenting with ${mainSymptom.name} (${mainSymptom.severity}) for ${mainSymptom.duration}`;
 
+        // Symptoms
         const symptoms = document.getElementById("symptoms");
         symptoms.innerHTML = "";
         consultation.symptoms.forEach((symptom) => {
           const tag = document.createElement("span");
           tag.className = "symptom-tag";
-          tag.textContent = `${symptom.name} (${symptom.severity})`;
+          tag.textContent = `${symptom.name} (${
+            symptom.severity || "unknown"
+          }) - ${symptom.duration || "duration unknown"}`;
           symptoms.appendChild(tag);
         });
 
@@ -598,12 +615,12 @@
         medicalHistory.innerHTML = "";
         if (
           consultation.medical_history &&
-          consultation.medical_history.length > 0
+          consultation.medical_history.medical_history
         ) {
-          consultation.medical_history.forEach((item) => {
+          consultation.medical_history.medical_history.forEach((item) => {
             const historyTag = document.createElement("span");
             historyTag.className = "history-tag";
-            historyTag.textContent = item;
+            historyTag.textContent = `${item.condition} (${item.duration})`;
             medicalHistory.appendChild(historyTag);
           });
         }
@@ -613,15 +630,30 @@
         treatmentPlan.innerHTML = "";
         consultation.prescription.medications.forEach((med) => {
           const medItem = document.createElement("p");
-          medItem.textContent = `${med.name}: ${med.dosage} for ${med.duration}`;
+          medItem.textContent = `${med.name}: ${med.dosage} for ${
+            med.duration
+          }${med.purpose ? ` - ${med.purpose}` : ""}`;
           treatmentPlan.appendChild(medItem);
         });
 
         // Optional sections
-        document.getElementById("tests").innerHTML = consultation.tests || "";
-        document.getElementById("followup").innerHTML =
-          consultation.followup || "";
-        document.getElementById("advice").innerHTML = consultation.advice || "";
+        document.getElementById("tests").innerHTML = Array.isArray(
+          consultation.prescription.tests
+        )
+          ? consultation.prescription.tests.join("<br>")
+          : "";
+
+        document.getElementById("followup").innerHTML = Array.isArray(
+          consultation.prescription.follow_up
+        )
+          ? consultation.prescription.follow_up.join("<br>")
+          : "";
+
+        document.getElementById("advice").innerHTML = Array.isArray(
+          consultation.prescription.advice
+        )
+          ? consultation.prescription.advice.join("<br>")
+          : "";
 
         // Update voting buttons state
         const hasVoted = votedCases.has(consultation.id);

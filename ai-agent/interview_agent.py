@@ -367,7 +367,7 @@ class DoctorPatientAgent:
         }
         
         os.makedirs("consultations", exist_ok=True)
-        filename = f"consultations/consultation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"frontend/consultations/consultation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
