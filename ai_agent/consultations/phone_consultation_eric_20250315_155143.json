@@ -1,0 +1,78 @@
+{
+  "patient": {
+    "name": "Eric",
+    "age": 24,
+    "sex": "male"
+  },
+  "consultation_date": "2025-03-15T15:51:43.137607",
+  "symptoms": "I have a sore throat. I have congestion.  And body aches, House of a fever.",
+  "medical_history": "No.",
+  "medications": "Just Claritin.",
+  "conversation_history": [
+    {
+      "user": "Hello.",
+      "timestamp": "2025-03-15T15:48:07.041569"
+    },
+    {
+      "doctor": "Hello, I'm Dr. Agent. To get started, could you please tell me what brings you here today?",
+      "timestamp": "2025-03-15T15:48:07.041663"
+    },
+    {
+      "user": "Hey, kind of got a sore throat and I'm really congested Ben and I'm having some body aches, feeling really sick right now.",
+      "timestamp": "2025-03-15T15:48:29.829458"
+    },
+    {
+      "doctor": "I didn't quite catch that. Could you please tell me your name, age, and biological sex?",
+      "timestamp": "2025-03-15T15:48:32.583787"
+    },
+    {
+      "user": "My name is Eric, I'm 24 and I mail.",
+      "timestamp": "2025-03-15T15:48:51.824995"
+    },
+    {
+      "doctor": "Thank you Eric. What symptoms are you experiencing today?",
+      "timestamp": "2025-03-15T15:48:52.983007"
+    },
+    {
+      "user": "I have a sore throat. I have congestion.  And body aches, House of a fever.",
+      "timestamp": "2025-03-15T15:49:12.639031"
+    },
+    {
+      "doctor": "I understand. Do you have any relevant medical history I should know about?",
+      "timestamp": "2025-03-15T15:49:12.639262"
+    },
+    {
+      "user": "No.",
+      "timestamp": "2025-03-15T15:49:26.731741"
+    },
+    {
+      "doctor": "Are you currently taking any medications?",
+      "timestamp": "2025-03-15T15:49:26.731790"
+    },
+    {
+      "user": "Just Claritin.",
+      "timestamp": "2025-03-15T15:49:40.359859"
+    },
+    {
+      "doctor": "Based on what you've told me, Hi Eric! From what you've described, it sounds like you're dealing with symptoms that could point to a common cold or possibly the flu - the combination of sore throat, congestion, body aches, and fever is pretty typical for these viral infections.\n\nSince you're already taking Claritin (which helps more with allergies), you might want to consider over-the-counter medications specifically for cold/flu symptoms. Things like:\n- Acetaminophen or ibuprofen for the fever and body aches\n- A decongestant for the stuffiness\n- Throat lozenges for the sore throat\n\nSome other things that can help:\n- Rest (your body needs it!)\n- Stay hydrated with plenty of fluids\n- Try gargling with warm salt water for your throat\n- Use a humidifier if you have one\n\nGiven your age and lack of complicated medical history, this should resolve on its own within a week or so. However, if your fever gets high (over 103\u00b0F), symptoms worsen significantly, or you're not better in 7-10 days, you should see a doctor. Also, consider getting tested for COVID-19 since symptoms can be similar. Is there anything else you'd like to discuss?",
+      "timestamp": "2025-03-15T15:49:46.225950"
+    },
+    {
+      "user": "Yes, please.",
+      "timestamp": "2025-03-15T15:51:13.393681"
+    },
+    {
+      "doctor": "I notice you haven't shared your additional question or concern yet. What would you like to know more about regarding your symptoms or treatment? I'll be happy to help address any specific questions you have about your sore throat, congestion, body aches, or fever. Is there anything else I can help with?",
+      "timestamp": "2025-03-15T15:51:15.490045"
+    },
+    {
+      "user": "How do I know that? This isn't pneumonia.",
+      "timestamp": "2025-03-15T15:51:43.136606"
+    },
+    {
+      "doctor": "Thank you for calling. Take care and have a good day.",
+      "timestamp": "2025-03-15T15:51:43.136766"
+    }
+  ],
+  "call_duration": 216.096062
+}

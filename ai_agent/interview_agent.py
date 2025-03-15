@@ -137,7 +137,7 @@ class DoctorPatientAgent:
         
         try:
             # Initial symptom collection
-            initial_assessment = await self.ask_question("Hi I am Dr. Agent, here to help you out today! Please describe your current symptoms and their duration:")
+            initial_assessment = await self.ask_question("Hi I am your healthcare assistant, here to help you out today! Please describe your current symptoms and their duration:")
             self.current_symptoms = await self.analyze_symptoms(initial_assessment)
             
             # Medical history collection
@@ -147,6 +147,11 @@ class DoctorPatientAgent:
             # Medication check
             meds_response = await self.ask_question("Are you currently taking any medications or supplements?")
             current_meds = await self.identify_medications(meds_response)
+            if current_meds:
+                logger.info("Current medications identified, taking them into consideration.")
+                self.patient_data["current_medications"] = current_meds
+            else:
+                logger.info("No current medications reported.")
             
             # Symptom follow-up loop
             follow_up_count = 0
@@ -563,7 +568,7 @@ class DoctorPatientAgent:
         # Process based on current state
         if self.call_state == 'greeting':
             # First interaction - collect demographics
-            response = "Hello, I'm Dr. Smith. To get started, could you please tell me your name, age, and biological sex?"
+            response = "Hello, I'm Dr. Agent. To get started, could you please tell me what brings you here today?"
             self.call_state = 'demographics'
         
         elif self.call_state == 'demographics':
@@ -653,6 +658,33 @@ class DoctorPatientAgent:
         # Record response
         self.call_history.append({"doctor": response, "timestamp": datetime.now().isoformat()})
         return response
+
+    async def save_phone_consultation(self):
+        """Save the phone consultation to a JSON file"""
+        # Create consultations directory if it doesn't exist
+        os.makedirs('consultations', exist_ok=True)
+        
+        # Generate a unique filename with timestamp and patient name
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        patient_name = self.demographics.get('name', 'unknown').replace(' ', '_').lower()
+        filename = f"consultations/phone_consultation_{patient_name}_{timestamp}.json"
+        
+        # Prepare consultation data
+        consultation_data = {
+            "patient": self.demographics,
+            "consultation_date": datetime.now().isoformat(),
+            "symptoms": self.symptoms,
+            "medical_history": self.medical_history,
+            "medications": self.medications,
+            "conversation_history": self.call_history,
+            "call_duration": (datetime.now() - datetime.fromisoformat(self.call_history[0]["timestamp"])).total_seconds()
+        }
+        
+        # Save to file
+        with open(filename, 'w') as f:
+            json.dump(consultation_data, f, indent=2)
+        
+        return filename
 
 async def main():
     # Load character configuration

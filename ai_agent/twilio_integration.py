@@ -52,26 +52,30 @@ def handle_response():
         agent_response = loop.run_until_complete(
             agent.process_voice_input(speech_result)
         )
+        
+        # Check if conversation is ending
+        if hasattr(agent, 'call_state') and agent.call_state == 'end':
+            # Save consultation before ending
+            loop.run_until_complete(agent.save_phone_consultation())
+            
+            # End the call
+            response.say(agent_response)
+            response.hangup()
+        else:
+            # Continue conversation
+            gather = Gather(
+                input='speech',
+                speech_timeout=5,
+                action='/consultation/handle_response',
+                method='POST'
+            )
+            gather.say(agent_response)
+            response.append(gather)
     finally:
         loop.close()
     
-    # Check if conversation is ending
-    if hasattr(agent, 'call_state') and agent.call_state == 'end':
-        # End the call
-        response.say(agent_response)
-        response.hangup()
-    else:
-        # Continue conversation
-        gather = Gather(
-            input='speech',
-            speech_timeout=5,
-            action='/consultation/handle_response',
-            method='POST'
-        )
-        gather.say(agent_response)
-        response.append(gather)
-    
     return Response(str(response), mimetype='text/xml')
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001) 
