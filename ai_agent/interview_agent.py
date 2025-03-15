@@ -134,17 +134,29 @@ class DoctorPatientAgent:
     async def conduct_consultation(self):
         """Conduct the medical consultation process."""
         logger.info("Starting medical consultation...")
-        
+
+        # Greet user once
+        greeting = "Hello, I'm Dr. Agent. I'm here to help. Could you please tell me what's going on today?"
+        print(greeting)
+        if self.voice_enabled and self.voice_llm:
+            await self.speak_text(greeting)
+
         try:
-            # Initial symptom collection
-            initial_assessment = await self.ask_question("Hi I am your healthcare assistant, here to help you out today! Please describe your current symptoms and their duration:")
+            # Ask for symptoms first
+            initial_assessment = await self.ask_question("What symptoms are you experiencing?")
             self.current_symptoms = await self.analyze_symptoms(initial_assessment)
             
-            # Medical history collection
+            # Check if we have basic demographics, if not, then ask
+            if "demographics" not in self.patient_data or not self.patient_data["demographics"]:
+                print("I didn't catch your name, age, and sex. Could you please tell me?")
+                demographics_input = await self.ask_question("Your name, age, and sex?")
+                # ... (code to parse demographics_input as needed)
+            
+            # Ask about medical history
             history_response = await self.ask_question("Do you have any relevant medical history or existing conditions?")
             self.medical_history = await self.analyze_medical_history(history_response)
             
-            # Medication check
+            # Ask about medications
             meds_response = await self.ask_question("Are you currently taking any medications or supplements?")
             current_meds = await self.identify_medications(meds_response)
             if current_meds:
@@ -153,21 +165,38 @@ class DoctorPatientAgent:
             else:
                 logger.info("No current medications reported.")
             
-            # Symptom follow-up loop
+            # Allow user to ask questions or follow up
             follow_up_count = 0
             while follow_up_count < 3:
                 needs_followup = await self.yn_needs_followup()
                 if "No" in needs_followup:
                     break
-                
+
                 follow_up_question = await self.generate_followup_question()
                 follow_up_response = await self.ask_question(follow_up_question)
                 await self.update_assessment(follow_up_response)
                 follow_up_count += 1
             
-            # Generate and present prescription
+            # Generate prescription
             await self.generate_prescription()
-            await self.save_consultation()
+            # See if the user is satisfied
+            satisfaction = await self.ask_question("Do you have any more questions? (Yes/No)")
+            if satisfaction.lower().strip() in ["no", "n"]:
+                farewell = "Thank you. Get well soon and have a good day!"
+                print(farewell)
+                if self.voice_enabled and self.voice_llm:
+                    await self.speak_text(farewell)
+                return
+            
+            # Otherwise, let them ask more if needed
+            extra_question = await self.ask_question("What else would you like to know?")
+            # ... handle extra question ...
+            
+            # Finally, end the consultation
+            farewell = "Take care and have a good day."
+            print(farewell)
+            if self.voice_enabled and self.voice_llm:
+                await self.speak_text(farewell)
             
         except MedicalConsultationException as e:
             logger.info("Consultation ended: " + str(e))
@@ -561,16 +590,21 @@ class DoctorPatientAgent:
             self.call_state = 'greeting'
             self.demographics = {}
             self.call_history = []
-        
+
         # Record input
         self.call_history.append({"user": text, "timestamp": datetime.now().isoformat()})
-        
+
         # Process based on current state
         if self.call_state == 'greeting':
-            # First interaction - collect demographics
-            response = "Hello, I'm Dr. Agent. To get started, could you please tell me what brings you here today?"
+            # First, welcome the user and ask what brings them here
+            response = "Hello, I'm your pulse healthcare assistant. Could you please tell me what brings you here today?"
+            self.call_state = 'ask_demographics'
+
+        elif self.call_state == 'ask_demographics':
+            # The user has just told us what brings them here; now ask for demographics
+            response = "Thank you for sharing. Could you please tell me your name, age, and biological sex?"
             self.call_state = 'demographics'
-        
+
         elif self.call_state == 'demographics':
             # Process demographics
             try:
@@ -578,83 +612,83 @@ class DoctorPatientAgent:
                 prompt = f"""
                 Extract the following information from the patient's response:
                 Patient response: {text}
-                
+
                 Format as JSON:
                 {{
-                    "name": "patient name",
-                    "age": "patient age as number",
-                    "sex": "biological sex (male/female)"
+                  "name": "patient name",
+                  "age": "patient age as number",
+                  "sex": "biological sex (male/female)"
                 }}
                 """
                 result = await self.llm.ainvoke(prompt)
                 self.demographics = json.loads(result.text())
-                
+
                 # Move to symptoms
                 response = f"Thank you {self.demographics.get('name', 'there')}. What symptoms are you experiencing today?"
                 self.call_state = 'symptoms'
             except:
                 # Retry demographics
                 response = "I didn't quite catch that. Could you please tell me your name, age, and biological sex?"
-        
+
         elif self.call_state == 'symptoms':
             # Process symptoms
             self.symptoms = text
             response = "I understand. Do you have any relevant medical history I should know about?"
             self.call_state = 'medical_history'
-        
+
         elif self.call_state == 'medical_history':
             # Process medical history
             self.medical_history = text
             response = "Are you currently taking any medications?"
             self.call_state = 'medications'
-        
+
         elif self.call_state == 'medications':
             # Process medications
             self.medications = text
-            
+
             # Generate assessment
             prompt = f"""
             Based on the following patient information, provide a brief assessment and recommendation:
-            
+
             Demographics: {self.demographics}
             Symptoms: {self.symptoms}
             Medical History: {self.medical_history}
             Medications: {self.medications}
-            
+
             Keep your response conversational and under 200 words.
             """
             result = await self.llm.ainvoke(prompt)
             assessment = result.text()
-            
-            # Final response
+
+            # Final response, allow user to continue or finish
             response = f"Based on what you've told me, {assessment} Is there anything else you'd like to discuss?"
             self.call_state = 'followup'
-        
+
         elif self.call_state == 'followup':
-            # Handle follow-up or end conversation
-            if any(word in text.lower() for word in ['no', 'nothing', 'that\'s all', 'goodbye']):
+            # If user says they're done, end the call
+            if any(word in text.lower() for word in ['no', 'nothing', "that's all", 'goodbye']):
                 response = "Thank you for calling. Take care and have a good day."
                 self.call_state = 'end'
             else:
                 # Generate contextual response to follow-up
                 prompt = f"""
                 Patient has additional question or concern: {text}
-                
+
                 Previous conversation:
                 Demographics: {self.demographics}
                 Symptoms: {self.symptoms}
                 Medical History: {self.medical_history}
                 Medications: {self.medications}
-                
+
                 Provide a helpful, brief response addressing their concern.
                 """
                 result = await self.llm.ainvoke(prompt)
                 response = f"{result.text()} Is there anything else I can help with?"
-        
+
         else:
             # Default response
             response = "Thank you for calling. Is there anything else I can help with?"
-        
+
         # Record response
         self.call_history.append({"doctor": response, "timestamp": datetime.now().isoformat()})
         return response
