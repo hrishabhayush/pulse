@@ -1,0 +1,47 @@
+{
+  "form_type": "Consent for Treatment",
+  "timestamp": "2025-03-13T23:35:18.868507",
+  "verbal_consent": {
+    "given": false,
+    "datetime": "",
+    "witness": ""
+  },
+  "treatment_details": {
+    "diagnosis": "Upper Respiratory Tract Infection (Common Cold)",
+    "proposed_treatments": [
+      {
+        "treatment": "Acetaminophen (Tylenol)",
+        "purpose": "For fever and headache",
+        "potential_risks": "",
+        "benefits": ""
+      },
+      {
+        "treatment": "Dextromethorphan",
+        "purpose": "For cough",
+        "potential_risks": "",
+        "benefits": ""
+      },
+      {
+        "treatment": "Saline nasal spray",
+        "purpose": "For nasal congestion",
+        "potential_risks": "",
+        "benefits": ""
+      }
+    ],
+    "procedures": [
+      "Rapid COVID-19 test",
+      "Rapid strep test if sore throat persists"
+    ]
+  },
+  "emergency_authorization": {
+    "authorized": false,
+    "limitations": ""
+  },
+  "confirmation": {
+    "patient_name": "",
+    "signature": "",
+    "date": "",
+    "witness_signature": ""
+  },
+  "form_id": "CONS_20250315_063906"
+}
