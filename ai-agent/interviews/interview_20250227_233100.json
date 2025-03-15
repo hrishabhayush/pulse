@@ -1,0 +1,20 @@
+{
+  "timestamp": "20250227_233100",
+  "conversation": [
+    {
+      "question": "How disappointed would you feel if you could no longer use hyperbolic?",
+      "response": "I would be disappointed, however, I could always go to other marketplaces to find a different AI agent.",
+      "timestamp": "2025-02-27T23:30:19.840407"
+    },
+    {
+      "question": "What specific features or aspects of Hyperbolic would you miss the most if you had to switch to a different AI agent?",
+      "response": "Essentially the framework for automating my workflow while writing emails, etc.",
+      "timestamp": "2025-02-27T23:30:46.974395"
+    }
+  ],
+  "summary": {
+    "error": "Failed to generate summary",
+    "timestamp": "2025-02-27T23:31:00.656677"
+  },
+  "website_knowledge": {}
+}

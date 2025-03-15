@@ -1,0 +1,20 @@
+{
+  "timestamp": "20250227_235449",
+  "conversation": [
+    {
+      "question": "How disappointed would you feel if you could no longer use hyperbolic?",
+      "response": "I would be disappointed, however, I could always go to other marketplaces to find a better product or a different product.",
+      "timestamp": "2025-02-27T23:53:56.274092"
+    },
+    {
+      "question": "What other marketplaces or alternative products would you consider using instead of Hyperbolic?",
+      "response": "I would be using Zapier or make.com to automate my workflow and do other stuff.",
+      "timestamp": "2025-02-27T23:54:22.652631"
+    }
+  ],
+  "summary": {
+    "error": "Failed to generate summary",
+    "timestamp": "2025-02-27T23:54:49.065946"
+  },
+  "website_knowledge": {}
+}
