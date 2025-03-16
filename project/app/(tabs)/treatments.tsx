@@ -1,22 +1,36 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system';
 import { Clock, Calendar, CircleAlert as AlertCircle } from 'lucide-react-native';
 
 export default function TreatmentsScreen() {
-  const medications = [
-    {
-      name: "Acetaminophen (Tylenol)",
-      dosage: "500mg every 6 hours as needed",
-      duration: "5 days",
-      purpose: "For fever and headache"
-    },
-    {
-      name: "Dextromethorphan",
-      dosage: "10-20mg every 4-6 hours as needed",
-      duration: "5 days",
-      purpose: "For cough"
-    }
-  ];
+  const [medications, setMedications] = useState<{ name: string; dosage: string; duration: string; purpose: string }[]>([]);
+
+  useEffect(() => {
+    const loadMedications = async () => {
+      try {
+        const dirUri = FileSystem.documentDirectory + 'consultations/';
+        const files = await FileSystem.readDirectoryAsync(dirUri);
+        const newMedications = [];
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const content = await FileSystem.readAsStringAsync(dirUri + file);
+            const data = JSON.parse(content);
+            newMedications.push(...data.treatments);
+          }
+        }
+        setMedications(newMedications);
+        console.log(`Loaded ${newMedications.length} medications`);
+      } catch (error) {
+        console.error('Failed to load medications:', error);
+      }
+    };
+    
+    loadMedications();
+    const intervalId = setInterval(loadMedications, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
