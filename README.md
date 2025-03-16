@@ -11,6 +11,7 @@ Pulse, an AI healthcare agent, trained on past medical papers and healthcare art
 
 ## 🚀 Setup Guide
 
+![Pulse banner](assets/pulse.png)
 Follow these steps to set up both the AI agent backend and the mobile application.
 
 ### Prerequisites
