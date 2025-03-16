@@ -135,15 +135,15 @@ class DoctorPatientAgent:
         """Conduct the medical consultation process."""
         logger.info("Starting medical consultation...")
 
-        # Greet user once
-        greeting = "Hello, I'm Dr. Agent. I'm here to help. Could you please tell me what's going on today?"
+        # Greet user with a calm and welcoming demeanor
+        greeting = "Hello, I'm Dr. Agent. I'm here to help you today. Can you please share your symptoms with me?"
         print(greeting)
         if self.voice_enabled and self.voice_llm:
             await self.speak_text(greeting)
 
         try:
-            # Ask for symptoms first
-            initial_assessment = await self.ask_question("What symptoms are you experiencing?")
+            # Inquire about patient's symptoms
+            initial_assessment = await self.ask_question("Can you describe the symptoms you're experiencing?")
             self.current_symptoms = await self.analyze_symptoms(initial_assessment)
             
             # Check if we have basic demographics, if not, then ask
@@ -242,23 +242,21 @@ class DoctorPatientAgent:
             return []  # Return empty list to continue consultation
 
     async def generate_followup_question(self) -> str:
-        """Generate context-aware medical follow-up question."""
+        """Generate context-aware medical follow-up question with diagnostic focus."""
         prompt = f"""
-        Based on this patient data:
+        Based on the collected data:
         Symptoms: {self.current_symptoms}
-        History: {self.medical_history}
+        Medical History: {self.medical_history}
         
-        What is the most important follow-up question to ask?
-        Consider:
-        - Symptom clarification
-        - Risk factors
-        - Pain characteristics
-        - Associated symptoms
+        Identify any gaps in information required to hypothesize a differential diagnosis. Frame a follow-up question focusing on:
+        - Precision in symptom description (onset, duration, triggers)
+        - Elucidating possible differential diagnoses
+        - Clarifying associated risks or previous conditions
         
-        Return only the question with no additional text.
-        
+        Provide the question solely, excluding additional text.
+
         Example response:
-        Can you describe the quality of your headache? Is it throbbing, sharp, or dull?
+        Could you specify if your chest pain occurs during physical exertion or at rest, and its exact location?
         """
         try:
             response = await self.llm.ainvoke(prompt)
@@ -567,21 +565,29 @@ class DoctorPatientAgent:
             return []
 
     async def update_assessment(self, response: str):
-        """Update medical assessment with new information."""
+        """Update medical assessment with additional insights from new information."""
         try:
-            # Analyze symptoms from follow-up response
+            # Analyze and refine the symptom profile with follow-up responses
             new_symptoms = await self.analyze_symptoms(response)
-            if new_symptoms:  # Only extend if we got valid symptoms
-                self.current_symptoms.extend(new_symptoms)
+            if new_symptoms:
+                for symptom in new_symptoms:
+                    # Avoid duplicate entries by checking existing symptoms
+                    if symptom not in self.current_symptoms:
+                        self.current_symptoms.append(symptom)
             
-            # Check for new medical history mentions
+            # Assess and merge any updates to the medical history
             history_update = await self.analyze_medical_history(response)
             if history_update and history_update.get("medical_history"):
-                self.medical_history.extend(history_update["medical_history"])
-                
+                for item in history_update["medical_history"]:
+                    if item not in self.medical_history:
+                        self.medical_history.append(item)
+                        
+            # Optionally, trigger differential diagnosis update if conditions meet
+            # self.update_differential_diagnosis(self.current_symptoms, self.medical_history)
+            
         except Exception as e:
             logger.error(f"Error updating assessment: {e}")
-            # Continue consultation despite error
+            # Proceed with consultation notwithstanding the error
 
     async def process_voice_input(self, text: str) -> str:
         """Process voice input from phone call and return spoken response"""

@@ -20,23 +20,21 @@ def answer_call():
     return Response(str(response), mimetype='text/xml')
 
 @app.route("/consultation/start", methods=['GET', 'POST'])
-def start_consultation():
-    """Main consultation flow controller."""
-    response = VoiceResponse()
+# def start_consultation():
+#     """Main consultation flow controller."""
+#     response = VoiceResponse()
 
-    gather = Gather(
-        input='speech',
-        speech_timeout=3,
-        action='/consultation/handle_response',
-        method='POST'
-    )
-    gather.say("Please describe your symptoms after the beep.")
-    response.append(gather)
+#     gather = Gather(
+#         input='speech',
+#         speech_timeout=3,
+#         action='/consultation/handle_response',
+#         method='POST'
+#     )
+#     response.append(gather)
 
-    # Optional beep sound
-    response.play('https://demo.twilio.com/docs/classic.mp3')
+#     # Remove music playback
 
-    return Response(str(response), mimetype='text/xml')
+#     return Response(str(response), mimetype='text/xml')
 
 @app.route("/consultation/handle_response", methods=['GET', 'POST'])
 def handle_response():
@@ -60,7 +58,7 @@ def handle_response():
             # Otherwise, continue the conversation
             gather = Gather(
                 input='speech',
-                speech_timeout=5,
+                speech_timeout=3,
                 action='/consultation/handle_response',
                 method='POST'
             )
