@@ -1,0 +1,70 @@
+{
+  "patient": {
+    "name": "amrish",
+    "age": 19,
+    "sex": "male"
+  },
+  "consultation_date": "2025-03-16T01:58:41.226257",
+  "symptoms": "Yeah, I've been having coffee and problem reading and have been having this stuff for the past three days.",
+  "medical_history": "No.",
+  "medications": "No, I'm not.",
+  "conversation_history": [
+    {
+      "user": "",
+      "timestamp": "2025-03-16T01:56:07.044139"
+    },
+    {
+      "doctor": "Hello, I'm your pulse healthcare assistant. Could you please tell me your name, age, and biological sex?",
+      "timestamp": "2025-03-16T01:56:07.044169"
+    },
+    {
+      "user": "Hi, amrish of I am 19 years old and mail.",
+      "timestamp": "2025-03-16T01:56:24.265401"
+    },
+    {
+      "doctor": "Thank you amrish. What brings you here today?",
+      "timestamp": "2025-03-16T01:56:25.912088"
+    },
+    {
+      "user": "I'm just, you know, getting medical Consultants regarding my problems and I love you.",
+      "timestamp": "2025-03-16T01:56:43.186137"
+    },
+    {
+      "doctor": "Could you please describe your symptoms in detail and tell me how long you've been experiencing them?",
+      "timestamp": "2025-03-16T01:56:43.186204"
+    },
+    {
+      "user": "Yeah, I've been having coffee and problem reading and have been having this stuff for the past three days.",
+      "timestamp": "2025-03-16T01:57:02.775115"
+    },
+    {
+      "doctor": "I understand. Do you have any relevant medical history I should know about?",
+      "timestamp": "2025-03-16T01:57:02.775258"
+    },
+    {
+      "user": "No.",
+      "timestamp": "2025-03-16T01:57:14.222536"
+    },
+    {
+      "doctor": "Are you currently taking any medications?",
+      "timestamp": "2025-03-16T01:57:14.222596"
+    },
+    {
+      "user": "No, I'm not.",
+      "timestamp": "2025-03-16T01:57:23.501447"
+    },
+    {
+      "doctor": "Based on what you've told me, Hey Amrish,\n\nFrom what you've shared, it sounds like you're experiencing some difficulty with reading and might be consuming caffeine (coffee). Since these symptoms have only been present for three days, and you don't have any significant medical history or medications, this could be related to a few common issues.\n\nExcessive caffeine intake can sometimes cause jitters, difficulty concentrating, and vision issues. Additionally, prolonged reading or screen time without proper breaks can lead to eye strain and reading difficulties.\n\nHere are my suggestions:\n- Try cutting back on coffee for a few days to see if it helps\n- Take regular breaks when reading (try the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds)\n- Ensure you're getting enough sleep\n- Make sure you have good lighting when reading\n\nIf symptoms persist beyond a week or get worse, it would be wise to see an eye doctor to rule out any vision-related issues.\n\nFeel free to come back if things don't improve or if you have any other concerns! Is there anything else you'd like to discuss?",
+      "timestamp": "2025-03-16T01:57:28.698848"
+    },
+    {
+      "user": "No.",
+      "timestamp": "2025-03-16T01:58:41.224892"
+    },
+    {
+      "doctor": "Thank you for calling. Take care and have a good day.",
+      "timestamp": "2025-03-16T01:58:41.225650"
+    }
+  ],
+  "call_duration": 154.182133
+}

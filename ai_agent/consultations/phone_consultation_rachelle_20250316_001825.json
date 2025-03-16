@@ -1,0 +1,78 @@
+{
+  "patient": {
+    "name": "Rachelle",
+    "age": 19,
+    "sex": "male"
+  },
+  "consultation_date": "2025-03-16T00:18:25.430174",
+  "symptoms": "yeah, sure I have been experiencing these black pain since like, the past two days and I played football yesterday and it kind of increase that even more",
+  "medical_history": "Nope, not really.",
+  "medications": "No, I'm not.",
+  "conversation_history": [
+    {
+      "user": "",
+      "timestamp": "2025-03-16T00:15:23.282885"
+    },
+    {
+      "doctor": "Hello, I'm your pulse healthcare assistant. Could you please tell me your name, age, and biological sex?",
+      "timestamp": "2025-03-16T00:15:23.282919"
+    },
+    {
+      "user": "Hi, Rachelle. I'm 19 years old and I'm meal.",
+      "timestamp": "2025-03-16T00:15:40.121283"
+    },
+    {
+      "doctor": "Thank you Rachelle. What brings you here today?",
+      "timestamp": "2025-03-16T00:15:41.318237"
+    },
+    {
+      "user": "Yeah, I'm here for just a general medical check up and just wanted to ask you some questions about my leg pain.",
+      "timestamp": "2025-03-16T00:15:58.595363"
+    },
+    {
+      "doctor": "Could you please describe your symptoms in detail and tell me how long you've been experiencing them?",
+      "timestamp": "2025-03-16T00:15:58.595547"
+    },
+    {
+      "user": "yeah, sure I have been experiencing these black pain since like, the past two days and I played football yesterday and it kind of increase that even more",
+      "timestamp": "2025-03-16T00:16:19.895722"
+    },
+    {
+      "doctor": "I understand. Do you have any relevant medical history I should know about?",
+      "timestamp": "2025-03-16T00:16:19.895852"
+    },
+    {
+      "user": "Nope, not really.",
+      "timestamp": "2025-03-16T00:16:32.331397"
+    },
+    {
+      "doctor": "Are you currently taking any medications?",
+      "timestamp": "2025-03-16T00:16:32.331606"
+    },
+    {
+      "user": "No, I'm not.",
+      "timestamp": "2025-03-16T00:16:41.947664"
+    },
+    {
+      "doctor": "Based on what you've told me, Hi Rachelle, thanks for sharing those details. From what you've described, it sounds like you're dealing with some back pain that started a couple days ago and got worse after playing football. This is pretty common, especially in active young people, and often happens when we strain our back muscles during sports or physical activity.\n\nSince this is a recent injury and seems connected to your football game, it's likely a minor muscle strain. However, to be on the safe side, I'd recommend:\n\n- Taking a short break from intense physical activity\n- Using ice packs for 15-20 minutes at a time to reduce pain and swelling\n- Trying over-the-counter pain relievers like ibuprofen if needed\n- Doing gentle stretches once the acute pain subsides\n\nIf the pain gets worse, lasts more than a week, or if you develop any numbness, tingling, or pain down your legs, you should definitely see a doctor. Also, when you return to football, make sure to warm up properly and pay attention to your form to prevent future injuries.\n\nHow does that sound? Is there anything else you'd like to discuss?",
+      "timestamp": "2025-03-16T00:16:47.749468"
+    },
+    {
+      "user": "That's perfect. Thank you so much.",
+      "timestamp": "2025-03-16T00:18:02.926642"
+    },
+    {
+      "doctor": "You're welcome! Take care, and remember to rest and ice your back. If your pain continues or gets worse after a few days, please don't hesitate to seek medical attention. Is there anything else I can help with?",
+      "timestamp": "2025-03-16T00:18:04.533146"
+    },
+    {
+      "user": "No, thank you.",
+      "timestamp": "2025-03-16T00:18:25.428679"
+    },
+    {
+      "doctor": "Thank you for calling. Take care and have a good day.",
+      "timestamp": "2025-03-16T00:18:25.428902"
+    }
+  ],
+  "call_duration": 182.1473
+}

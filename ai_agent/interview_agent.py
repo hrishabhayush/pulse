@@ -602,13 +602,8 @@ class DoctorPatientAgent:
 
         # Process based on current state
         if self.call_state == 'greeting':
-            # First, welcome the user and ask what brings them here
-            response = "Hello, I'm your pulse healthcare assistant. Could you please tell me what brings you here today?"
-            self.call_state = 'ask_demographics'
-
-        elif self.call_state == 'ask_demographics':
-            # The user has just told us what brings them here; now ask for demographics
-            response = "Thank you for sharing. Could you please tell me your name, age, and biological sex?"
+            # First, ask for demographics
+            response = "Hello, I'm your pulse healthcare assistant. Could you please tell me your name, age, and biological sex?"
             self.call_state = 'demographics'
 
         elif self.call_state == 'demographics':
@@ -629,12 +624,19 @@ class DoctorPatientAgent:
                 result = await self.llm.ainvoke(prompt)
                 self.demographics = json.loads(result.text())
 
-                # Move to symptoms
-                response = f"Thank you {self.demographics.get('name', 'there')}. What symptoms are you experiencing today?"
-                self.call_state = 'symptoms'
+                # Now that we have demographics, ask what brings them here
+                response = f"Thank you {self.demographics.get('name', 'there')}. What brings you here today?"
+                self.call_state = 'chief_complaint'
             except:
                 # Retry demographics
                 response = "I didn't quite catch that. Could you please tell me your name, age, and biological sex?"
+
+        elif self.call_state == 'chief_complaint':
+            # Process initial complaint
+            self.chief_complaint = text
+            # Ask for specific symptoms and duration
+            response = "Could you please describe your symptoms in detail and tell me how long you've been experiencing them?"
+            self.call_state = 'symptoms'
 
         elif self.call_state == 'symptoms':
             # Process symptoms

@@ -1,11 +1,13 @@
 import asyncio
-from flask import Flask, request, Response
+from flask import Flask, request, Response, jsonify
+from flask_cors import CORS  # Add this import
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from interview_agent import DoctorPatientAgent
 import os
 import json
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 agent = DoctorPatientAgent(json.load(open('characters/interviewer.json')))
 
 @app.route("/answer", methods=['GET', 'POST'])
@@ -21,20 +23,20 @@ def answer_call():
 
 @app.route("/consultation/start", methods=['GET', 'POST'])
 # def start_consultation():
-#     """Main consultation flow controller."""
-#     response = VoiceResponse()
+    # """Main consultation flow controller."""
+    # response = VoiceResponse()
 
-#     gather = Gather(
-#         input='speech',
-#         speech_timeout=3,
-#         action='/consultation/handle_response',
-#         method='POST'
-#     )
-#     response.append(gather)
+    # gather = Gather(
+    #     input='speech',
+    #     speech_timeout=3,
+    #     action='/consultation/handle_response',
+    #     method='POST'
+    # )
+    # response.append(gather)
 
-#     # Remove music playback
+    # # Remove music playback
 
-#     return Response(str(response), mimetype='text/xml')
+    # return Response(str(response), mimetype='text/xml')
 
 @app.route("/consultation/handle_response", methods=['GET', 'POST'])
 def handle_response():
@@ -73,25 +75,73 @@ def handle_response():
 def get_latest_consultation():
     """
     Returns the most recent consultation data.
-    Assumes consultation files are named in chronological order,
-    such as consultation_YYYYMMDD_HHMMSS.json.
+    Assumes consultation files are named with timestamp, like
+    phone_consultation_rachelle_20250316_001825.json.
     """
-    cons_dir = "frontend/consultations"
-    if not os.path.exists(cons_dir):
-        return {"error": "No consultations directory found"}, 404
+    # Look in multiple possible directories for consultation files
+    possible_dirs = [
+        "consultations",                # Current directory
+        "ai_agent/consultations",       # From project root
+        "../consultations",             # One level up
+        "./consultations",              # Explicitly current directory
+        "/Users/hrishabhayush/Documents/Projects/pulse/ai_agent/consultations"  # Absolute path
+    ]
+    
+    cons_dir = None
+    checked_paths = []
+    
+    for directory in possible_dirs:
+        checked_paths.append(os.path.abspath(directory))
+        if os.path.exists(directory):
+            # Check if this directory has any consultation files
+            try:
+                files = [f for f in os.listdir(directory) 
+                        if (f.startswith("consultation_") or f.startswith("phone_consultation_")) 
+                        and f.endswith(".json")]
+                if files:
+                    cons_dir = directory
+                    print(f"Found consultation directory: {os.path.abspath(directory)}")
+                    break
+            except Exception as e:
+                print(f"Error checking directory {directory}: {e}")
+    
+    if not cons_dir:
+        # Print out what directories we checked for debugging
+        print(f"Could not find consultations directory. Checked: {checked_paths}")
+        return {"error": "No consultations directory with files found", "checked": checked_paths}, 404
 
-    all_files = [f for f in os.listdir(cons_dir) if f.startswith("consultation_") and f.endswith(".json")]
+    # Find all consultation files
+    all_files = [f for f in os.listdir(cons_dir) 
+                if (f.startswith("consultation_") or f.startswith("phone_consultation_")) 
+                and f.endswith(".json")]
+    
     if not all_files:
-        return {"error": "No consultations found"}, 404
+        return {"error": "No consultations found in directory", "directory": cons_dir}, 404
 
     # Sort by filename descending to get the newest
-    all_files.sort(reverse=True)
+    # This works if filenames contain timestamps
+    all_files.sort()
     newest = all_files[0]
-
-    with open(os.path.join(cons_dir, newest), "r") as f:
-        data = json.load(f)
-
-    return data, 200
+    
+    file_path = os.path.join(cons_dir, newest)
+    print(f"Loading consultation from: {file_path}")
+    
+    try:
+        with open(file_path, "r") as f:
+            data = json.load(f)
+        
+        # Add content type and CORS headers
+        response = app.response_class(
+            response=json.dumps(data),
+            status=200,
+            mimetype='application/json'
+        )
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+    
+    except Exception as e:
+        print(f"Error loading consultation: {e}")
+        return {"error": f"Failed to load consultation: {str(e)}"}, 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001)
