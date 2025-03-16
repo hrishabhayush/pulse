@@ -18,8 +18,7 @@ Follow these steps to set up both the AI agent backend and the mobile applicatio
 - Python 3.9+ for the AI agent
 - Node.js 18+ and npm/yarn for the React Native app
 - OpenAI API key for the AI doctor functionality
-- Twilio account for voice calls (optional)
-- MongoDB (optional, for data persistence)
+- Twilio account for voice calls
 
 ### Environment Setup
 
