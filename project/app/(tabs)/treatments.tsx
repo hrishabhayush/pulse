@@ -1,10 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Clock, Calendar, CircleAlert as AlertCircle, AlertTriangle } from 'lucide-react-native';
-import { format, parseISO } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 
-// Define interfaces for the consultation data
 interface Patient {
   name: string;
   age: number;
@@ -27,409 +25,361 @@ interface ConsultationData {
   call_duration: number;
 }
 
-interface DifferentialDiagnosis {
-  primary: string;
-  alternative: string[];
-  confidence: string;
+interface Medication {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  timeOfDay: string[];
+  refillDate?: string;
+  instructions: string;
+  image: string;
 }
 
 export default function TreatmentsScreen() {
+  const [activeTab, setActiveTab] = useState('current');
   const [consultation, setConsultation] = useState<ConsultationData | null>(null);
-  const [differentialDiagnosis, setDifferentialDiagnosis] = useState<DifferentialDiagnosis | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [aiGeneratedMeds, setAiGeneratedMeds] = useState<Medication[]>([]);
+  
+  // Default medications as fallback
+  const defaultMedications: Medication[] = [
+    {
+      id: '1',
+      name: 'Albuterol Inhaler',
+      dosage: '90mcg',
+      frequency: 'As needed',
+      timeOfDay: ['As needed for shortness of breath'],
+      instructions: 'Use 2 puffs every 4-6 hours as needed for shortness of breath or wheezing.',
+      image: 'https://www.drugs.com/images/pills/nlm/167140101.jpg'
+    },
+    {
+      id: '2',
+      name: 'Cetirizine',
+      dosage: '10mg',
+      frequency: 'Once daily',
+      timeOfDay: ['Morning'],
+      refillDate: '2024-06-15',
+      instructions: 'Take one tablet daily in the morning for seasonal allergies.',
+      image: 'https://www.drugs.com/images/pills/fio/ABR06090.JPG'
+    }
+  ];
+  
+  const pastMedications: Medication[] = [
+    {
+      id: '3',
+      name: 'Amoxicillin',
+      dosage: '500mg',
+      frequency: 'Three times daily',
+      timeOfDay: ['Morning', 'Afternoon', 'Evening'],
+      instructions: 'Take with food. Completed full course for strep throat in January 2024.',
+      image: 'https://www.drugs.com/images/pills/fio/STA04230.JPG'
+    }
+  ];
+  
+  // Helper function to get API URL based on environment
+  const getApiUrl = () => {
+    // For an iOS simulator, localhost works
+    // For Android emulator, use 10.0.2.2
+    // For physical devices, use your computer's IP address
+    return 'http://localhost:5001'; // Modify as needed
+  };
+  
   const fetchLatestConsultation = async () => {
     setRefreshing(true);
     try {
-      // Update with your actual local server address (including port)
-      // If testing on device, use your computer's IP address instead of localhost
-      const response = await fetch('http://localhost:5001/consultations/latest');
+      console.log("Fetching from:", `${getApiUrl()}/consultations/latest`);
+      const response = await fetch(`${getApiUrl()}/consultations/latest`);
       
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        throw new Error(`Server error: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log("Fetched data:", data); // Add logging to debug
-      
-      if (!data || !data.patient) {
-        throw new Error("Invalid consultation data format");
-      }
-      
+      console.log("Successfully fetched consultation data");
       setConsultation(data);
       
-      // Generate a differential diagnosis based on the consultation data
-      if (data.symptoms && data.conversation_history) {
-        const diagnosis = analyzeSymptomsForDiagnosis(data.symptoms, data.conversation_history);
-        setDifferentialDiagnosis(diagnosis);
-      }
+      // Generate medications based on the consultation
+      const generatedMeds = generateMedicationsFromConsultation(data);
+      setAiGeneratedMeds(generatedMeds);
       
       setError(null);
     } catch (err) {
       console.error('Error fetching consultation:', err);
-      setError(`Could not load treatment data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Network issue. Please check your connection.`);
+      // Fall back to default medications
+      setAiGeneratedMeds(defaultMedications);
     } finally {
       setRefreshing(false);
     }
   };
-
-  // Fetch data when component mounts and set up polling
+  
+  // Fetch data when component mounts
   useEffect(() => {
     fetchLatestConsultation();
-    
-    // Polling every 10 seconds to check for updates
-    const intervalId = setInterval(fetchLatestConsultation, 10000);
-    
-    return () => clearInterval(intervalId);
   }, []);
-
+  
   const onRefresh = () => {
     fetchLatestConsultation();
   };
-
-  // Analyze symptoms to create a differential diagnosis
-  const analyzeSymptomsForDiagnosis = (symptomsText: string, history: ConversationItem[]): DifferentialDiagnosis => {
-    // Extract key symptoms from the text
-    const symptoms = symptomsText.toLowerCase();
-    let primaryDiagnosis = '';
-    const alternativeDiagnoses: string[] = [];
+  
+  // Function to analyze consultation and generate medication recommendations
+  const generateMedicationsFromConsultation = (data: ConsultationData): Medication[] => {
+    const medications: Medication[] = [];
+    const symptoms = data.symptoms.toLowerCase();
+    const conversations = data.conversation_history;
     
-    // Check for common diagnoses based on symptoms and doctor conversation
-    const doctorMessages = history.filter(item => item.doctor && 
-      (item.doctor.includes("diagnosis") || 
-       item.doctor.includes("Based on what you've told me") || 
-       item.doctor.includes("sounds like")));
+    // Find doctor recommendations in conversation
+    const doctorMessages = conversations.filter(item => item.doctor && 
+      (item.doctor.toLowerCase().includes('recommend') || 
+       item.doctor.toLowerCase().includes('take') ||
+       item.doctor.toLowerCase().includes('medication')));
     
-    if (doctorMessages.length > 0) {
-      // Extract diagnoses from doctor messages
-      const message = doctorMessages[0].doctor || "";
+    // Check for common conditions based on symptoms and conversation
+    
+    // For back pain
+    if (symptoms.includes('back pain') || 
+        doctorMessages.some(msg => msg.doctor?.toLowerCase().includes('back pain'))) {
       
-      // Try to extract a diagnosis from the message
-      if (message.includes("muscle strain") || message.includes("back pain")) {
-        primaryDiagnosis = "Muscle Strain (Back)";
-        alternativeDiagnoses.push("Lumbar Sprain", "Musculoskeletal Pain");
-      } else if (message.includes("cold") || message.includes("respiratory")) {
-        primaryDiagnosis = "Upper Respiratory Tract Infection";
-        alternativeDiagnoses.push("Common Cold", "Viral Rhinitis");
-      } else if (message.includes("headache") || message.includes("migraine")) {
-        primaryDiagnosis = "Tension Headache";
-        alternativeDiagnoses.push("Migraine", "Stress-related Headache");
-      } else {
-        // Default diagnosis based on symptoms
-        if (symptoms.includes("back pain") || symptoms.includes("leg pain")) {
-          primaryDiagnosis = "Musculoskeletal Pain";
-          alternativeDiagnoses.push("Muscle Strain", "Lumbar Sprain");
-        } else if (symptoms.includes("headache") || symptoms.includes("head pain")) {
-          primaryDiagnosis = "Tension Headache";
-          alternativeDiagnoses.push("Migraine", "Stress-related Headache");
-        } else {
-          primaryDiagnosis = "Symptomatic Pain";
-          alternativeDiagnoses.push("Generalized Discomfort", "Minor Injury");
-        }
-      }
-    } else {
-      // If no doctor messages with diagnosis, make best guess from symptoms
-      if (symptoms.includes("back pain") || symptoms.includes("leg pain")) {
-        primaryDiagnosis = "Musculoskeletal Pain";
-        alternativeDiagnoses.push("Muscle Strain", "Lumbar Sprain");
-      } else if (symptoms.includes("headache") || symptoms.includes("head pain")) {
-        primaryDiagnosis = "Tension Headache";
-        alternativeDiagnoses.push("Migraine", "Stress-related Headache");
-      } else {
-        primaryDiagnosis = "Symptomatic Pain";
-        alternativeDiagnoses.push("Generalized Discomfort", "Minor Injury");
-      }
-    }
-    
-    return {
-      primary: primaryDiagnosis,
-      alternative: alternativeDiagnoses,
-      confidence: "Moderate - requires clinical confirmation"
-    };
-  };
-
-  // Extract appropriate medications based on diagnosis
-  const recommendMedications = (diagnosis: DifferentialDiagnosis) => {
-    const medications = [];
-    
-    // For back pain/muscle strain
-    if (diagnosis.primary.includes("Muscle") || 
-        diagnosis.primary.includes("Back") || 
-        diagnosis.primary.includes("Musculoskeletal")) {
       medications.push({
+        id: 'ai-1',
         name: 'Ibuprofen',
         dosage: '400-600mg',
-        duration: 'Every 6-8 hours as needed for pain (max 3200mg/day)',
-        purpose: 'Pain relief and anti-inflammatory'
+        frequency: 'Every 6-8 hours as needed',
+        timeOfDay: ['As needed for pain'],
+        instructions: 'Take with food to minimize stomach upset. Use for back pain relief and reduce inflammation.',
+        image: 'https://www.drugs.com/images/pills/nlm/006035401.jpg'
       });
       
       medications.push({
-        name: 'Muscle Relaxant (Cyclobenzaprine)',
-        dosage: '5-10mg',
-        duration: 'Every 8 hours as needed for muscle spasm',
-        purpose: 'Relieve muscle spasms'
-      });
-      
-      medications.push({
-        name: 'Topical Analgesic (Menthol/Camphor)',
-        dosage: 'Apply thin layer',
-        duration: '3-4 times daily to affected area',
-        purpose: 'Local pain relief'
+        id: 'ai-2',
+        name: 'Muscle Relaxant (OTC)',
+        dosage: 'As directed',
+        frequency: 'As needed',
+        timeOfDay: ['As needed for muscle spasm'],
+        instructions: 'Use as directed for muscle spasms. Apply ice packs for 15-20 minutes at a time to reduce pain and swelling.',
+        image: 'https://www.drugs.com/images/pills/mmx/t110118f/muscle-relaxant.jpg'
       });
     }
+    
     // For headaches
-    else if (diagnosis.primary.includes("Headache") || diagnosis.primary.includes("Migraine")) {
-      medications.push({
-        name: 'Acetaminophen (Tylenol)',
-        dosage: '500-1000mg',
-        duration: 'Every 6 hours as needed for headache (max 3000mg/day)',
-        purpose: 'Pain relief'
-      });
+    else if (symptoms.includes('headache') || 
+             doctorMessages.some(msg => msg.doctor?.toLowerCase().includes('headache'))) {
       
       medications.push({
-        name: 'Ibuprofen',
-        dosage: '400mg',
-        duration: 'Every 6-8 hours as needed for pain (max 3200mg/day)',
-        purpose: 'Pain relief and anti-inflammatory'
+        id: 'ai-1',
+        name: 'Acetaminophen (Tylenol)',
+        dosage: '500-1000mg',
+        frequency: 'Every 6 hours as needed',
+        timeOfDay: ['As needed for pain'],
+        instructions: 'Do not exceed 3000mg in 24 hours. Use for headache relief.',
+        image: 'https://www.drugs.com/images/pills/mtm/004904011.jpg'
       });
     }
+    
     // For respiratory issues
-    else if (diagnosis.primary.includes("Cold") || diagnosis.primary.includes("Respiratory")) {
-      medications.push({
-        name: 'Acetaminophen (Tylenol)',
-        dosage: '500-1000mg',
-        duration: 'Every 6 hours as needed for fever/pain (max 3000mg/day)',
-        purpose: 'Fever and pain relief'
-      });
+    else if (symptoms.includes('cough') || symptoms.includes('congestion') || 
+             doctorMessages.some(msg => msg.doctor?.toLowerCase().includes('cold'))) {
       
       medications.push({
+        id: 'ai-1',
         name: 'Guaifenesin (Mucinex)',
-        dosage: '400-600mg',
-        duration: 'Every 12 hours',
-        purpose: 'Expectorant for congestion'
-      });
-      
-      medications.push({
-        name: 'Saline Nasal Spray',
-        dosage: '2 sprays per nostril',
-        duration: '4 times daily as needed',
-        purpose: 'Nasal congestion relief'
-      });
-    }
-    // Default for general pain
-    else {
-      medications.push({
-        name: 'Acetaminophen (Tylenol)',
-        dosage: '500-1000mg',
-        duration: 'Every 6 hours as needed (max 3000mg/day)',
-        purpose: 'Pain relief'
-      });
-      
-      medications.push({
-        name: 'Ibuprofen',
         dosage: '400mg',
-        duration: 'Every 6-8 hours as needed (max 3200mg/day)',
-        purpose: 'Pain relief and anti-inflammatory'
+        frequency: 'Every 12 hours',
+        timeOfDay: ['Morning', 'Evening'],
+        instructions: 'Take with a full glass of water to help loosen congestion.',
+        image: 'https://www.drugs.com/images/pills/fio/RBX02610.JPG'
+      });
+      
+      medications.push({
+        id: 'ai-2',
+        name: 'Acetaminophen (Tylenol)',
+        dosage: '500mg',
+        frequency: 'Every 6 hours as needed',
+        timeOfDay: ['As needed for fever/pain'],
+        instructions: 'Do not exceed 3000mg in 24 hours. Use for fever and pain relief.',
+        image: 'https://www.drugs.com/images/pills/mtm/004904011.jpg'
       });
     }
+    
+    // For leg pain/sports injury (based on your sample conversation)
+    else if (symptoms.includes('leg pain') || 
+             doctorMessages.some(msg => msg.doctor?.toLowerCase().includes('football'))) {
+      
+      medications.push({
+        id: 'ai-1',
+        name: 'Ibuprofen',
+        dosage: '400-600mg',
+        frequency: 'Every 6-8 hours as needed',
+        timeOfDay: ['As needed for pain'],
+        instructions: 'Take with food. Use for pain relief and to reduce inflammation from sports injury.',
+        image: 'https://www.drugs.com/images/pills/nlm/006035401.jpg'
+      });
+      
+      medications.push({
+        id: 'ai-2',
+        name: 'Cold Pack Therapy',
+        dosage: '15-20 minutes',
+        frequency: 'Several times daily',
+        timeOfDay: ['As needed for swelling'],
+        instructions: 'Apply ice packs for 15-20 minutes at a time to reduce pain and swelling. Rest the affected area.',
+        image: 'https://www.drugs.com/otc/113825/cold-therapy-pack.jpg'
+      });
+    }
+    
+    // If no specific condition detected, or as a default
+    if (medications.length === 0) {
+      medications.push({
+        id: 'ai-1',
+        name: 'Acetaminophen (Tylenol)',
+        dosage: '500mg',
+        frequency: 'Every 6 hours as needed',
+        timeOfDay: ['As needed for pain/fever'],
+        instructions: 'Do not exceed 3000mg in 24 hours. General pain reliever and fever reducer.',
+        image: 'https://www.drugs.com/images/pills/mtm/004904011.jpg'
+      });
+    }
+    
+    // Add a disclaimer medication card
+    medications.push({
+      id: 'disclaimer',
+      name: 'IMPORTANT: Consult a Doctor',
+      dosage: '',
+      frequency: '',
+      timeOfDay: [''],
+      instructions: 'These recommendations are based on AI analysis of your symptoms. Always consult with a healthcare professional before starting any medication.',
+      image: 'https://www.drugs.com/images/pills/mmx/t110118f/caution.jpg'
+    });
     
     return medications;
   };
-
-  // Extract follow-up instructions
-  const extractFollowUp = (history: ConversationItem[], diagnosis: DifferentialDiagnosis | null) => {
-    const instructions = [];
-    
-    // Add diagnosis-specific follow-up instructions
-    if (diagnosis) {
-      if (diagnosis.primary.includes("Muscle") || diagnosis.primary.includes("Back")) {
-        instructions.push('Consult with a physician if pain persists beyond 7 days');
-        instructions.push('Seek immediate care if you develop numbness, tingling, or severe pain');
-      } else if (diagnosis.primary.includes("Headache")) {
-        instructions.push('Consult with a physician if headaches become more frequent or severe');
-        instructions.push('Seek immediate care if headache is accompanied by fever, stiff neck, or confusion');
-      } else if (diagnosis.primary.includes("Respiratory") || diagnosis.primary.includes("Cold")) {
-        instructions.push('Consult with a physician if symptoms persist beyond 10 days');
-        instructions.push('Seek immediate care if you develop high fever, shortness of breath, or chest pain');
-      }
+  
+  const renderMedicationList = (meds: Medication[]) => {
+    if (meds.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="medical" size={48} color="#cbd5e1" />
+          <Text style={styles.emptyStateText}>No medications to display</Text>
+        </View>
+      );
     }
     
-    // Extract any follow-up instructions from conversation
-    const doctorMessages = history.filter(item => 
-      item.doctor && (
-        item.doctor.toLowerCase().includes('follow up') || 
-        item.doctor.toLowerCase().includes('see a doctor') ||
-        item.doctor.toLowerCase().includes('gets worse')
-      )
-    );
-    
-    if (doctorMessages.length > 0) {
-      const message = doctorMessages[0].doctor || "";
-      if (message.toLowerCase().includes('if the pain gets worse')) {
-        instructions.push('Return if pain worsens or new symptoms develop');
-      }
-      if (message.toLowerCase().includes('follow up')) {
-        instructions.push('Follow up with your primary care provider');
-      }
-    }
-    
-    return instructions.length > 0 ? instructions : ['Follow up if symptoms worsen or persist beyond one week'];
+    return meds.map(med => (
+      <View key={med.id} style={[styles.medicationCard, med.id === 'disclaimer' && styles.disclaimerCard]}>
+        <View style={styles.medicationHeader}>
+          <Image 
+            source={{ uri: med.image }} 
+            style={styles.medicationImage} 
+            onError={() => console.log(`Failed to load image for ${med.name}`)}
+          />
+          <View style={styles.medicationInfo}>
+            <Text style={[
+              styles.medicationName, 
+              med.id === 'disclaimer' && styles.disclaimerText
+            ]}>
+              {med.name}
+            </Text>
+            {med.dosage && (
+              <Text style={styles.medicationDosage}>{med.dosage} • {med.frequency}</Text>
+            )}
+            {med.refillDate && (
+              <View style={styles.refillContainer}>
+                <Ionicons name="calendar" size={14} color="#64748b" />
+                <Text style={styles.refillText}>Refill by {new Date(med.refillDate).toLocaleDateString()}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        
+        {med.id !== 'disclaimer' && <View style={styles.divider} />}
+        
+        {(med.timeOfDay[0] !== '' && med.id !== 'disclaimer') && (
+          <View style={styles.scheduleContainer}>
+            <Text style={styles.scheduleTitle}>Schedule</Text>
+            <View style={styles.scheduleItems}>
+              {med.timeOfDay.map((time, index) => (
+                <View key={index} style={styles.scheduleItem}>
+                  <Ionicons name="time" size={16} color="#64748b" />
+                  <Text style={styles.scheduleText}>{time}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        
+        <View style={styles.instructionsContainer}>
+          {med.id !== 'disclaimer' && (
+            <Text style={styles.instructionsTitle}>Instructions</Text>
+          )}
+          <Text style={[
+            styles.instructionsText,
+            med.id === 'disclaimer' && styles.disclaimerInstructions
+          ]}>
+            {med.instructions}
+          </Text>
+        </View>
+        
+        {activeTab === 'current' && med.id !== 'disclaimer' && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="notifications" size={16} color="#0891b2" />
+              <Text style={styles.actionButtonText}>Set Reminder</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="refresh" size={16} color="#0891b2" />
+              <Text style={styles.actionButtonText}>Request Refill</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    ));
   };
-
-  // Extract general advice
-  const extractAdvice = (history: ConversationItem[], diagnosis: DifferentialDiagnosis | null) => {
-    const advice = [];
-    
-    // Add diagnosis-specific advice
-    if (diagnosis) {
-      if (diagnosis.primary.includes("Muscle") || diagnosis.primary.includes("Back")) {
-        advice.push('Apply ice for 15-20 minutes every 2-3 hours for the first 48-72 hours');
-        advice.push('Rest the affected area but maintain gentle movement');
-        advice.push('Avoid activities that worsen the pain');
-      } else if (diagnosis.primary.includes("Headache")) {
-        advice.push('Rest in a quiet, dark room during episodes');
-        advice.push('Identify and avoid headache triggers (stress, certain foods, lack of sleep)');
-        advice.push('Maintain regular sleep schedule');
-      } else if (diagnosis.primary.includes("Respiratory") || diagnosis.primary.includes("Cold")) {
-        advice.push('Rest and stay hydrated');
-        advice.push('Use a humidifier to ease congestion');
-        advice.push('Gargle with warm salt water for sore throat');
-      }
-    }
-    
-    // Extract advice from conversation
-    const doctorMessages = history.filter(item => 
-      item.doctor && (
-        item.doctor.toLowerCase().includes('recommend') || 
-        item.doctor.toLowerCase().includes('advise') ||
-        item.doctor.toLowerCase().includes('advice')
-      )
-    );
-    
-    if (doctorMessages.length > 0) {
-      const message = doctorMessages[0].doctor || "";
-      
-      if (message.toLowerCase().includes('rest')) {
-        advice.push('Rest as needed and avoid overexertion');
-      }
-      
-      if (message.toLowerCase().includes('hydrate') || message.toLowerCase().includes('fluid')) {
-        advice.push('Stay well-hydrated');
-      }
-      
-      if (message.toLowerCase().includes('ice')) {
-        advice.push('Apply ice to affected area to reduce inflammation');
-      }
-      
-      if (message.toLowerCase().includes('warm up')) {
-        advice.push('Warm up properly before physical activity');
-      }
-    }
-    
-    return advice;
-  };
-
+  
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Treatments</Text>
+        <Text style={styles.headerSubtitle}>
+          {consultation?.patient?.name || 'Patient'}, 
+          {consultation?.patient?.age || '20'} years old
+        </Text>
+      </View>
+      
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'current' && styles.activeTab]} 
+          onPress={() => setActiveTab('current')}
+        >
+          <Text style={[styles.tabText, activeTab === 'current' && styles.activeTabText]}>Current</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'past' && styles.activeTab]} 
+          onPress={() => setActiveTab('past')}
+        >
+          <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>Past</Text>
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {error ? (
+        {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
-        ) : consultation ? (
-          <>
-            <View style={styles.patientCard}>
-              <Text style={styles.patientName}>{consultation.patient.name}'s Treatment Plan</Text>
-              <Text style={styles.consultationDate}>
-                {format(parseISO(consultation.consultation_date), 'MMMM d, yyyy')}
-              </Text>
-            </View>
-          
-            {differentialDiagnosis && (
-              <View style={styles.diagnosisCard}>
-                <Text style={styles.diagnosisTitle}>Differential Diagnosis</Text>
-                <Text style={styles.primaryDiagnosis}>{differentialDiagnosis.primary}</Text>
-                
-                <Text style={styles.alternativeLabel}>Alternative considerations:</Text>
-                {differentialDiagnosis.alternative.map((alt, index) => (
-                  <Text key={index} style={styles.alternativeDiagnosis}>• {alt}</Text>
-                ))}
-                
-                <Text style={styles.confidenceLevel}>Confidence: {differentialDiagnosis.confidence}</Text>
-                
-                <View style={styles.warningContainer}>
-                  <AlertTriangle size={20} color="#b91c1c" />
-                  <Text style={styles.warningText}>
-                    This is a preliminary diagnosis. Please consult a licensed healthcare professional for a complete evaluation.
-                  </Text>
-                </View>
-              </View>
-            )}
-          
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recommended Medications</Text>
-              {differentialDiagnosis ? (
-                recommendMedications(differentialDiagnosis).map((med, index) => (
-                  <View key={index} style={styles.medicationCard}>
-                    <Text style={styles.medicationName}>{med.name}</Text>
-                    <View style={styles.infoRow}>
-                      <Clock size={16} color="#64748b" />
-                      <Text style={styles.infoText}>{med.dosage}</Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <Calendar size={16} color="#64748b" />
-                      <Text style={styles.infoText}>{med.duration}</Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <AlertCircle size={16} color="#64748b" />
-                      <Text style={styles.infoText}>{med.purpose}</Text>
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No medications recommended</Text>
-                </View>
-              )}
-              
-              <View style={styles.disclaimerContainer}>
-                <Text style={styles.disclaimerText}>
-                  These medication recommendations are for informational purposes only. 
-                  Please consult with a qualified healthcare provider before starting any new medication.
-                </Text>
-              </View>
-            </View>
-    
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Follow-up Instructions</Text>
-              <View style={styles.card}>
-                {differentialDiagnosis && 
-                  extractFollowUp(consultation.conversation_history, differentialDiagnosis).map((item, index) => (
-                    <Text key={index} style={styles.listItem}>• {item}</Text>
-                  ))}
-              </View>
-            </View>
-            
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>General Advice</Text>
-              <View style={styles.card}>
-                {differentialDiagnosis && 
-                  extractAdvice(consultation.conversation_history, differentialDiagnosis).map((item, index) => (
-                    <Text key={index} style={styles.listItem}>• {item}</Text>
-                  ))}
-              </View>
-            </View>
-          </>
-        ) : (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>No treatment data available</Text>
-          </View>
+        )}
+        
+        {activeTab === 'current' ? renderMedicationList(aiGeneratedMeds.length > 0 ? aiGeneratedMeds : defaultMedications) : renderMedicationList(pastMedications)}
+        
+        {activeTab === 'current' && (
+          <TouchableOpacity style={styles.addButton}>
+            <Ionicons name="add" size={24} color="#ffffff" />
+            <Text style={styles.addButtonText}>Add Medication</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -441,106 +391,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  tab: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#0891b2',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  activeTabText: {
+    color: '#0891b2',
+  },
   scrollContent: {
     padding: 16,
-  },
-  patientCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  patientName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  consultationDate: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  diagnosisCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  diagnosisTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 12,
-  },
-  primaryDiagnosis: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  alternativeLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#475569',
-    marginBottom: 8,
-  },
-  alternativeDiagnosis: {
-    fontSize: 16,
-    color: '#64748b',
-    marginBottom: 4,
-    paddingLeft: 8,
-  },
-  confidenceLevel: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    color: '#64748b',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  warningContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#b91c1c',
-    marginLeft: 8,
-    flex: 1,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 16,
+    paddingTop: 0,
   },
   medicationCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -549,80 +445,149 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  disclaimerCard: {
+    backgroundColor: '#fff8f1',
     borderLeftWidth: 4,
-    borderLeftColor: '#3b82f6',
+    borderLeftColor: '#f97316',
+  },
+  medicationHeader: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  medicationImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 16,
+    backgroundColor: '#f1f5f9',
+  },
+  medicationInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
   medicationName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#64748b',
-    marginLeft: 8,
-  },
-  disclaimerContainer: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 12,
+    marginBottom: 4,
   },
   disclaimerText: {
-    fontSize: 14,
-    color: '#1e40af',
-    fontStyle: 'italic',
+    color: '#b45309',
+    fontWeight: '700',
   },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  listItem: {
+  medicationDosage: {
     fontSize: 16,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  refillContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refillText: {
+    fontSize: 14,
+    color: '#64748b',
+    marginLeft: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginBottom: 16,
+  },
+  scheduleContainer: {
+    marginBottom: 16,
+  },
+  scheduleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1e293b',
     marginBottom: 8,
   },
-  emptyState: {
-    padding: 20,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
+  scheduleItems: {
+    flexDirection: 'column',
+  },
+  scheduleItem: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
+  },
+  scheduleText: {
+    fontSize: 14,
+    color: '#64748b',
+    marginLeft: 8,
+  },
+  instructionsContainer: {
+    marginBottom: 16,
+  },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 20,
+  },
+  disclaimerInstructions: {
+    fontWeight: '500',
+    color: '#b45309',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#0891b2',
+    marginLeft: 12,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    color: '#0891b2',
+    marginLeft: 4,
+  },
+  addButton: {
+    backgroundColor: '#0891b2',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  addButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginLeft: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
+    marginTop: 16,
   },
   errorContainer: {
-    padding: 20,
+    padding: 15,
     backgroundColor: '#fee2e2',
-    borderRadius: 12,
-    alignItems: 'center',
+    borderRadius: 10,
+    marginBottom: 15,
   },
   errorText: {
-    fontSize: 16,
     color: '#b91c1c',
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#888',
+    fontWeight: '500',
   },
 });
