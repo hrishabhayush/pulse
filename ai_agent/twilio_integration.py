@@ -60,7 +60,7 @@ def handle_response():
             # Otherwise, continue the conversation
             gather = Gather(
                 input='speech',
-                speech_timeout=3,
+                speech_timeout=2,
                 action='/consultation/handle_response',
                 method='POST'
             )

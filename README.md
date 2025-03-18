@@ -22,6 +22,7 @@ Follow these steps to set up both the AI agent backend and the mobile applicatio
 - Git
 - Claude API key for the AI doctor functionality
 - Twilio account for voice calls
+- ngrok for deploying the local server
 
 ### Environment Setup
 
@@ -99,6 +100,9 @@ pip install -r requirements.txt
 # Create .env file from example
 cp .env.example .env
 # Edit .env with your API keys and configuration
+
+# Deploy the server that can listen the calls 
+ngrok http 5001
 
 # Run the backend server
 python twilio_integration.py
